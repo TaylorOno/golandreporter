@@ -35,7 +35,7 @@ func (g GolandReporter) BeforeSuiteDidRun(setupSummary *types.SetupSummary) {
 }
 
 func (g GolandReporter) SpecWillRun(specSummary *types.SpecSummary) {
-	fmt.Printf("=== RUN   %s\n", strings.Join(specSummary.ComponentTexts[1:], " "))
+	fmt.Printf("=== RUN   %s\n", sanitizeMessage(specSummary.ComponentTexts))
 }
 
 func (g GolandReporter) SpecDidComplete(specSummary *types.SpecSummary) {
@@ -63,5 +63,12 @@ func (g GolandReporter) SpecSuiteDidEnd(summary *types.SuiteSummary) {
 }
 
 func printResultOutput(specSummary *types.SpecSummary, result string) {
-	fmt.Printf("--- %s: %s (%.3fs)\n", result, strings.Join(specSummary.ComponentTexts[1:], " "), specSummary.RunTime.Seconds())
+	fmt.Printf("--- %s: %s (%.3fs)\n", result, sanitizeMessage(specSummary.ComponentTexts), specSummary.RunTime.Seconds())
+}
+
+func sanitizeMessage(componentText []string) string {
+	result := strings.Join(componentText[1:], " ")
+	result = strings.ReplaceAll(result, "(", "[")
+	result = strings.ReplaceAll(result, ")", "]")
+	return strings.TrimSpace(result)
 }
