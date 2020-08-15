@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"testing"
 
 	"github.com/onsi/ginkgo/config"
 	"github.com/onsi/ginkgo/reporters"
@@ -42,8 +43,11 @@ func (g GolandReporter) SpecDidComplete(specSummary *types.SpecSummary) {
 	if specSummary.Passed() {
 		printResultOutput(specSummary, "PASS")
 	} else if specSummary.HasFailureState() {
+		fmt.Printf("%v\n", specSummary.Failure.Location.String())
 		fmt.Printf("%s\n\n", specSummary.Failure.Message)
-		fmt.Printf("%s\n\n", specSummary.Failure.Location.FullStackTrace)
+		if testing.Verbose() {
+			fmt.Printf("%s\n\n", specSummary.Failure.Location.FullStackTrace)
+		}
 		printResultOutput(specSummary, "FAIL")
 	} else if specSummary.Skipped() {
 		printResultOutput(specSummary, "SKIP")
