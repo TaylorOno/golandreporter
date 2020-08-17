@@ -71,8 +71,6 @@ func printResultOutput(specSummary *types.SpecSummary, result string) {
 }
 
 func sanitizeMessage(componentText []string) string {
-	result := strings.Join(componentText[1:], " ")
-	result = strings.ReplaceAll(result, "(", "[")
-	result = strings.ReplaceAll(result, ")", "]")
-	return strings.TrimSpace(result)
+	result := strings.Join(componentText[1:], "/")
+	return strings.ReplaceAll(result, " ", "_")
 }
