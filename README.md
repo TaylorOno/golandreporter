@@ -7,7 +7,7 @@ Goland to get a list of output.
 This reporter will trick test2json into outputting the Ginkgo specs similar to
 `go test` output.
 
-![Ginkgo output in Goland's "Run" window](https://gist.githubusercontent.com/SemanticallyNull/19215f014f3ef0db3c3cd0b46da4d929/raw/18801f7f19a26ea19ba48a1c95d5e068396f7dd7/image1.png)
+![Ginkgo output in Goland's "Run" window](https://gist.githubusercontent.com/TaylorOno/48f9a7a243f0d0b89f89d176060ede33/raw/5bdfb5935293dfdfab7c92a6822ecbbb4e2fccc2/screenshot.png)
 
 ## Usage
 

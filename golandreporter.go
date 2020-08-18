@@ -2,15 +2,24 @@ package golandreporter
 
 import (
 	"fmt"
-	"os"
-	"strings"
-	"testing"
-
 	"github.com/onsi/ginkgo/config"
 	"github.com/onsi/ginkgo/reporters"
 	"github.com/onsi/ginkgo/reporters/stenographer"
 	"github.com/onsi/ginkgo/types"
+	"os"
+	"strings"
+	"testing"
 )
+
+type node struct{
+	parent *node
+	description string
+	failure  *types.SpecFailure
+	testResult string
+	children []*node
+}
+
+var root *node
 
 type GolandReporter struct{}
 
@@ -28,49 +37,110 @@ func NewAutoGolandReporter() reporters.Reporter {
 }
 
 func (g GolandReporter) SpecSuiteWillBegin(config config.GinkgoConfigType, summary *types.SuiteSummary) {
-
+	root = &node{nil, "[Top Level]", nil, "", []*node{}}
 }
 
 func (g GolandReporter) BeforeSuiteDidRun(setupSummary *types.SetupSummary) {
-
+	root.print()
 }
 
 func (g GolandReporter) SpecWillRun(specSummary *types.SpecSummary) {
-	fmt.Printf("=== RUN   %s\n", sanitizeMessage(specSummary.ComponentTexts))
+	insertNode(root, specSummary.ComponentTexts[1:])
 }
 
 func (g GolandReporter) SpecDidComplete(specSummary *types.SpecSummary) {
 	if specSummary.Passed() {
-		printResultOutput(specSummary, "PASS")
+		updateResult(root, specSummary, "PASS")
 	} else if specSummary.HasFailureState() {
-		fmt.Printf("%v\n", specSummary.Failure.Location.String())
-		fmt.Printf("%s\n\n", specSummary.Failure.Message)
-		if testing.Verbose() {
-			fmt.Printf("%s\n\n", specSummary.Failure.Location.FullStackTrace)
+		updateResult(root, specSummary, "FAIL")
+		spec, ok := findNode(root, specSummary.ComponentTexts[1:])
+		if ok {
+			spec.failure = &specSummary.Failure
 		}
-		printResultOutput(specSummary, "FAIL")
 	} else if specSummary.Skipped() {
-		printResultOutput(specSummary, "SKIP")
+		updateResult(root, specSummary, "SKIP")
 	} else if specSummary.Pending() {
-		printResultOutput(specSummary, "SKIP")
+		updateResult(root, specSummary, "SKIP")
 	} else {
 		panic("Unknown test output")
 	}
 }
 
-func (g GolandReporter) AfterSuiteDidRun(setupSummary *types.SetupSummary) {
+func updateResult(node *node, specSummary *types.SpecSummary, result string) {
+	for i := 1; i < len(specSummary.ComponentTexts); i++ {
+		target, ok := findNode(node, specSummary.ComponentTexts[1:i+1])
+		if !ok {
+			panic(strings.Join(specSummary.ComponentTexts, "/"))
+		}
+		if !strings.Contains(target.testResult, "FAIL") {
+			target.testResult = fmt.Sprintf("--- %s: %s (%.3fs)\n", result, getSpecName(*target), specSummary.RunTime.Seconds())
+		}
+	}
+}
 
+func findNode(node *node, components []string) (*node, bool) {
+	if len(components) == 0 {
+		return node, true
+	}
+	component := strings.ReplaceAll(components[0], " ", "_")
+	child, ok := getChild(node.children, component)
+	if !ok {
+		return nil, false
+	}
+	return findNode(child, components[1:])
+}
+
+func (g GolandReporter) AfterSuiteDidRun(setupSummary *types.SetupSummary) {
+	root.print()
 }
 
 func (g GolandReporter) SpecSuiteDidEnd(summary *types.SuiteSummary) {
-
+	root.print()
 }
 
-func printResultOutput(specSummary *types.SpecSummary, result string) {
-	fmt.Printf("--- %s: %s (%.3fs)\n", result, sanitizeMessage(specSummary.ComponentTexts), specSummary.RunTime.Seconds())
+func (n node) print() {
+	fmt.Printf("=== RUN   %s\n", getSpecName(n))
+	for _, node := range n.children {
+		node.print()
+	}
+	if n.failure != nil {
+		fmt.Printf("%v\n", n.failure.Location.String())
+		fmt.Printf("%s\n\n", n.failure.Message)
+		if testing.Verbose() {
+			fmt.Printf("%s\n\n", n.failure.Location.FullStackTrace)
+		}
+	}
+	fmt.Print(n.testResult)
 }
 
-func sanitizeMessage(componentText []string) string {
-	result := strings.Join(componentText[1:], "/")
-	return strings.ReplaceAll(result, " ", "_")
+func getSpecName(n node) string {
+	if n.description == "[Top Level]" {
+		return ""
+	}
+	name := fmt.Sprintf("%v/%v", getSpecName(*n.parent), n.description)
+	return strings.TrimPrefix(name, "/")
+}
+
+func insertNode(current *node, components []string) {
+	if len(components) < 1 {
+		return
+	}
+
+	component := strings.ReplaceAll(components[0], " ", "_")
+	child, ok := getChild(current.children, component)
+	if !ok {
+		child = &node{current, component, nil,"", []*node{}}
+		current.children = append(current.children, child)
+	}
+
+	insertNode(child, components[1:])
+}
+
+func getChild(children []*node, c string) (*node, bool) {
+	for _, node := range children {
+		if node.description == c {
+			return node, true
+		}
+	}
+	return nil, false
 }
