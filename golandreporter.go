@@ -9,14 +9,16 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 )
 
-type node struct{
-	parent *node
+type node struct {
+	parent      *node
 	description string
-	failure  *types.SpecFailure
-	testResult string
-	children []*node
+	failure     *types.SpecFailure
+	time        time.Duration
+	testResult  string
+	children    []*node
 }
 
 var root *node
@@ -37,7 +39,7 @@ func NewAutoGolandReporter() reporters.Reporter {
 }
 
 func (g GolandReporter) SpecSuiteWillBegin(config config.GinkgoConfigType, summary *types.SuiteSummary) {
-	root = &node{nil, "[Top Level]", nil, "", []*node{}}
+	root = &node{nil, "[Top Level]", nil, 0, "", []*node{}}
 }
 
 func (g GolandReporter) BeforeSuiteDidRun(setupSummary *types.SetupSummary) {
@@ -69,11 +71,12 @@ func (g GolandReporter) SpecDidComplete(specSummary *types.SpecSummary) {
 func updateResult(node *node, specSummary *types.SpecSummary, result string) {
 	for i := 1; i < len(specSummary.ComponentTexts); i++ {
 		target, ok := findNode(node, specSummary.ComponentTexts[1:i+1])
+		target.time = target.time + specSummary.RunTime
 		if !ok {
 			panic(strings.Join(specSummary.ComponentTexts, "/"))
 		}
 		if !strings.Contains(target.testResult, "FAIL") {
-			target.testResult = fmt.Sprintf("--- %s: %s (%.3fs)\n", result, getSpecName(*target), specSummary.RunTime.Seconds())
+			target.testResult = result
 		}
 	}
 }
@@ -110,7 +113,7 @@ func (n node) print() {
 			fmt.Printf("%s\n\n", n.failure.Location.FullStackTrace)
 		}
 	}
-	fmt.Print(n.testResult)
+	fmt.Printf("--- %s: %s (%.3fs)\n", n.testResult, getSpecName(n), n.time.Seconds())
 }
 
 func getSpecName(n node) string {
@@ -129,7 +132,7 @@ func insertNode(current *node, components []string) {
 	component := strings.ReplaceAll(components[0], " ", "_")
 	child, ok := getChild(current.children, component)
 	if !ok {
-		child = &node{current, component, nil,"", []*node{}}
+		child = &node{current, component, nil, 0,"", []*node{}}
 		current.children = append(current.children, child)
 	}
 

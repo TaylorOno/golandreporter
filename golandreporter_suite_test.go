@@ -3,6 +3,7 @@ package golandreporter
 import (
 	"github.com/onsi/ginkgo/types"
 	"testing"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -17,7 +18,7 @@ var _ = Describe("GolandReporter", func(){
 	var root *node
 
 	BeforeEach(func(){
-		root = &node{nil, "[Top Level]", nil, "", []*node{}}
+		root = &node{nil, "[Top Level]", nil, 0, "", []*node{}}
 	})
 
 	Context("insertNode", func(){
@@ -92,32 +93,44 @@ var _ = Describe("GolandReporter", func(){
 			insertNode(root, []string{"DescribeBlock", "ContextBlock", "SpecBlock"})
 			summary := &types.SpecSummary{ComponentTexts:[]string{"[Top_Level]", "DescribeBlock", "ContextBlock", "SpecBlock"}, RunTime:1}
 			updateResult(root, summary, "PASS")
-			Expect(root.children[0].testResult).To(Equal("--- PASS: DescribeBlock (0.000s)\n"))
-			Expect(root.children[0].children[0].testResult).To(Equal("--- PASS: DescribeBlock/ContextBlock (0.000s)\n"))
-			Expect(root.children[0].children[0].children[0].testResult).To(Equal("--- PASS: DescribeBlock/ContextBlock/SpecBlock (0.000s)\n"))
+			Expect(root.children[0].testResult).To(Equal("PASS"))
+			Expect(root.children[0].children[0].testResult).To(Equal("PASS"))
+			Expect(root.children[0].children[0].children[0].testResult).To(Equal("PASS"))
 		})
 
 		It("inserts FAIL at all levels", func(){
 			insertNode(root, []string{"DescribeBlock", "ContextBlock", "SpecBlock"})
 			summary := &types.SpecSummary{ComponentTexts:[]string{"[Top_Level]", "DescribeBlock", "ContextBlock", "SpecBlock"}, RunTime:1}
 			updateResult(root, summary, "FAIL")
-			Expect(root.children[0].testResult).To(Equal("--- FAIL: DescribeBlock (0.000s)\n"))
-			Expect(root.children[0].children[0].testResult).To(Equal("--- FAIL: DescribeBlock/ContextBlock (0.000s)\n"))
-			Expect(root.children[0].children[0].children[0].testResult).To(Equal("--- FAIL: DescribeBlock/ContextBlock/SpecBlock (0.000s)\n"))
+			Expect(root.children[0].testResult).To(Equal("FAIL"))
+			Expect(root.children[0].children[0].testResult).To(Equal("FAIL"))
+			Expect(root.children[0].children[0].children[0].testResult).To(Equal("FAIL"))
 		})
 
 		It("doesn't update parent nodes after failed child", func(){
 			insertNode(root, []string{"DescribeBlock", "ContextBlock", "SpecBlock1"})
 			insertNode(root, []string{"DescribeBlock", "ContextBlock", "SpecBlock2"})
-
 			testSummary1 := &types.SpecSummary{ComponentTexts:[]string{"[Top_Level]", "DescribeBlock", "ContextBlock", "SpecBlock1"}, RunTime:1}
 			updateResult(root, testSummary1, "FAIL")
 			testSummary2 := &types.SpecSummary{ComponentTexts:[]string{"[Top_Level]", "DescribeBlock", "ContextBlock", "SpecBlock2"}, RunTime:1}
 			updateResult(root, testSummary2, "PASS")
-			Expect(root.children[0].testResult).To(Equal("--- FAIL: DescribeBlock (0.000s)\n"))
-			Expect(root.children[0].children[0].testResult).To(Equal("--- FAIL: DescribeBlock/ContextBlock (0.000s)\n"))
-			Expect(root.children[0].children[0].children[0].testResult).To(Equal("--- FAIL: DescribeBlock/ContextBlock/SpecBlock1 (0.000s)\n"))
-			Expect(root.children[0].children[0].children[1].testResult).To(Equal("--- PASS: DescribeBlock/ContextBlock/SpecBlock2 (0.000s)\n"))
+			Expect(root.children[0].testResult).To(Equal("FAIL"))
+			Expect(root.children[0].children[0].testResult).To(Equal("FAIL"))
+			Expect(root.children[0].children[0].children[0].testResult).To(Equal("FAIL"))
+			Expect(root.children[0].children[0].children[1].testResult).To(Equal("PASS"))
+		})
+
+		It("calculates correct runtime", func(){
+			insertNode(root, []string{"DescribeBlock", "ContextBlock", "SpecBlock1"})
+			insertNode(root, []string{"DescribeBlock", "ContextBlock", "SpecBlock2"})
+			testSummary1 := &types.SpecSummary{ComponentTexts:[]string{"[Top_Level]", "DescribeBlock", "ContextBlock", "SpecBlock1"}, RunTime:1}
+			updateResult(root, testSummary1, "PASS")
+			testSummary2 := &types.SpecSummary{ComponentTexts:[]string{"[Top_Level]", "DescribeBlock", "ContextBlock", "SpecBlock2"}, RunTime:1}
+			updateResult(root, testSummary2, "PASS")
+			Expect(root.children[0].time).To(Equal(time.Duration(2)))
+			Expect(root.children[0].children[0].time).To(Equal(time.Duration(2)))
+			Expect(root.children[0].children[0].children[0].time).To(Equal(time.Duration(1)))
+			Expect(root.children[0].children[0].children[1].time).To(Equal(time.Duration(1)))
 		})
 	})
 })
