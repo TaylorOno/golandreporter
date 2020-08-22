@@ -18,7 +18,7 @@ type node struct {
 	failure     *types.SpecFailure
 	time        time.Duration
 	testResult  string
-	children    []*node
+	children    map[string]*node
 }
 
 var root *node
@@ -39,7 +39,7 @@ func NewAutoGolandReporter() reporters.Reporter {
 }
 
 func (g GolandReporter) SpecSuiteWillBegin(config config.GinkgoConfigType, summary *types.SuiteSummary) {
-	root = &node{nil, "[Top Level]", nil, 0, "", []*node{}}
+	root = &node{nil, "[Top Level]", nil, 0, "", make(map[string]*node)}
 }
 
 func (g GolandReporter) BeforeSuiteDidRun(setupSummary *types.SetupSummary) {
@@ -86,7 +86,7 @@ func findNode(node *node, components []string) (*node, bool) {
 		return node, true
 	}
 	component := strings.ReplaceAll(components[0], " ", "_")
-	child, ok := getChild(node.children, component)
+	child, ok := node.children[component]
 	if !ok {
 		return nil, false
 	}
@@ -130,20 +130,11 @@ func insertNode(current *node, components []string) {
 	}
 
 	component := strings.ReplaceAll(components[0], " ", "_")
-	child, ok := getChild(current.children, component)
+	child, ok := current.children[component]
 	if !ok {
-		child = &node{current, component, nil, 0,"", []*node{}}
-		current.children = append(current.children, child)
+		child = &node{current, component, nil, 0,"", make(map[string]*node)}
+		current.children[component] = child
 	}
 
 	insertNode(child, components[1:])
-}
-
-func getChild(children []*node, c string) (*node, bool) {
-	for _, node := range children {
-		if node.description == c {
-			return node, true
-		}
-	}
-	return nil, false
 }
