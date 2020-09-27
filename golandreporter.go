@@ -30,7 +30,7 @@ func NewGolandReporter() reporters.Reporter {
 }
 
 func NewAutoGolandReporter() reporters.Reporter {
-	if strings.Contains(os.Getenv("OLDPWD"), "Goland") {
+	if strings.Contains(strings.ToLower(os.Getenv("OLDPWD")), "goland") {
 		return NewGolandReporter()
 	} else {
 		stenographer := stenographer.New(!config.DefaultReporterConfig.NoColor, config.GinkgoConfig.FlakeAttempts > 1, os.Stdout)

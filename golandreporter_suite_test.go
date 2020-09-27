@@ -1,7 +1,9 @@
 package golandreporter
 
 import (
+	"fmt"
 	"github.com/onsi/ginkgo/types"
+	"os"
 	"testing"
 	"time"
 
@@ -131,6 +133,20 @@ var _ = Describe("GolandReporter", func(){
 			Expect(root.children[0].children[0].time).To(Equal(time.Duration(2)))
 			Expect(root.children[0].children[0].children[0].time).To(Equal(time.Duration(1)))
 			Expect(root.children[0].children[0].children[1].time).To(Equal(time.Duration(1)))
+		})
+	})
+
+	Context("NewAutoGolandReporter", func(){
+		It("Returns a goland reporter if OLDPWD contains goland", func(){
+			os.Setenv("OLDPWD", "gOlAnD")
+			reporter := NewAutoGolandReporter()
+			Expect(fmt.Sprintf("%T", reporter)).To(Equal("golandreporter.GolandReporter"))
+		})
+
+		It("Returns default reporter if OLDPWD does not contain goland", func(){
+			os.Setenv("OLDPWD", "vscode")
+			reporter := NewAutoGolandReporter()
+			Expect(fmt.Sprintf("%T", reporter)).To(Equal("*reporters.DefaultReporter"))
 		})
 	})
 })
