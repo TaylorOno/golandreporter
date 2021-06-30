@@ -143,10 +143,18 @@ var _ = Describe("GolandReporter", func(){
 			Expect(fmt.Sprintf("%T", reporter)).To(Equal("golandreporter.GolandReporter"))
 		})
 
-		It("Returns default reporter if OLDPWD does not contain goland", func(){
+		It("Returns default reporter if OLDPWD or SNAP_NAME does not contain goland", func(){
 			os.Setenv("OLDPWD", "vscode")
+			os.Setenv("SNAP_NAME", "vscode")
 			reporter := NewAutoGolandReporter()
 			Expect(fmt.Sprintf("%T", reporter)).To(Equal("*reporters.DefaultReporter"))
 		})
+
+		It("Returns a goland reporter if SNAP_NAME contains goland", func(){
+			os.Setenv("SNAP_NAME", "gOlAnD")
+			reporter := NewAutoGolandReporter()
+			Expect(fmt.Sprintf("%T", reporter)).To(Equal("golandreporter.GolandReporter"))
+		})
+
 	})
 })
